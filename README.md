@@ -8,9 +8,15 @@ and a buyer can check it against the chain and the files themselves.
 ## Live endpoint
 
 ```
-POST https://0ed1100ce8a700.lhr.life/v1/charter
-GET  https://0ed1100ce8a700.lhr.life/health
+POST https://138c873e87ab08.lhr.life/v1/charter
+GET  https://138c873e87ab08.lhr.life/health
 ```
+
+The tunnel hostname is served by a supervisor on the box: it restarts the agent if the health check
+fails and restarts the tunnel if it drops, writing the current address to `tunnel_url.txt`. Free
+tunnels rotate their hostname, so this URL can change; the listing on LAX still carries an older one
+because re-pointing it means paying the listing fee again. Money for a new listing is only spent once
+a hostname can be made stable.
 
 This is a tunnel hostname on a small VPS, so it can change; the code in this repository is the same
 server. Verified from the public internet: `/health` answers 200, and an unpaid POST answers 402 with
