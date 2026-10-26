@@ -69,6 +69,14 @@ export function createAgent({ verifyPayment } = {}) {
     }
     if (path !== '/v1/charter') return { status: 404, json: { error: 'not found' } };
 
+    // 0. An unpaid call always gets the terms, whatever it asked for: the challenge itself is free,
+    // and answering 402 here is what a buyer's client expects before it signs anything.
+    const payment = headers['x-payment'] || headers['payment-signature'] || headers['X-PAYMENT'] || headers['PAYMENT-SIGNATURE'];
+    if (!payment) {
+      const body402 = terms(`${RESOURCE_URL}${path}`);
+      return { status: 402, headers: { 'PAYMENT-REQUIRED': JSON.stringify(body402) }, json: body402 };
+    }
+
     // 1. Read the request. Nothing here costs money.
     let parsed;
     try {
@@ -103,12 +111,6 @@ export function createAgent({ verifyPayment } = {}) {
       }
     }
 
-    // 3. Ask for payment only once the call is known to be answerable.
-    const payment = headers['x-payment'] || headers['payment-signature'] || headers['X-PAYMENT'] || headers['PAYMENT-SIGNATURE'];
-    if (!payment) {
-      const body402 = terms(`${RESOURCE_URL}${path}`);
-      return { status: 402, headers: { 'PAYMENT-REQUIRED': JSON.stringify(body402) }, json: body402 };
-    }
     if (typeof verifyPayment !== 'function') {
       return { status: 503, json: { error: 'payment verification is not configured' } };
     }
