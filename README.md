@@ -19,6 +19,16 @@ agent wallet.
 
 Price per call: 0.01 USDC on Base.
 
+## LAX listing
+
+Listed on the LAX registry as `lax-ext-c89b637cb227` (listing fee 0.01 USDC paid). The listing
+endpoint is the tunnel above, so if the tunnel rotates the listing needs re-pointing and the offer
+reposted.
+
+```
+GET https://lax.kognai.ai/registry/offers/lax-ext-c89b637cb227
+```
+
 ## Call it
 
 ```bash
