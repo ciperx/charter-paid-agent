@@ -9,7 +9,7 @@
  * verifyPayment function before anything is decoded.
  */
 import { createServer } from 'node:http';
-import { decodeCharterData } from './lib/charter.js';
+import { decodeCharterData, verifyCharter } from './lib/charter.js';
 import { createPaywall } from './lib/pay.js';
 
 export const PRICE_ATOMIC = '10000'; // 0.01 USDC, six decimals
@@ -22,7 +22,13 @@ export const CAPABILITIES = {
     description: 'Decode the charter payload of a Base EAS attestation from its raw data.',
     price_atomic: PRICE_ATOMIC,
   },
+  'charter.verify': {
+    description: 'Fetch an attestation by uid from Base, decode its charter payload and check every text against its sha256 digest, including the IPFS fetch.',
+    price_atomic: PRICE_ATOMIC,
+  },
 };
+
+const UID_RE = /^0x[0-9a-fA-F]{64}$/;
 
 function readBody(req) {
   return new Promise((resolve, reject) => {
@@ -63,44 +69,78 @@ export function createAgent({ verifyPayment } = {}) {
     }
     if (path !== '/v1/charter') return { status: 404, json: { error: 'not found' } };
 
-    const payment = headers['x-payment'] || headers['payment-signature'] || headers['X-PAYMENT'] || headers['PAYMENT-SIGNATURE'];
-    if (!payment) {
-      return { status: 402, headers: { 'PAYMENT-REQUIRED': JSON.stringify(terms(`${RESOURCE_URL}${path}`)) }, json: terms(`${RESOURCE_URL}${path}`) };
-    }
-    if (typeof verifyPayment !== 'function') {
-      return { status: 503, json: { error: 'payment verification is not configured' } };
-    }
-    const verdict = await verifyPayment(payment, { price_atomic: PRICE_ATOMIC });
-    if (!verdict || !verdict.ok) {
-      return { status: 402, json: { error: 'payment not accepted', reason: verdict?.reason ?? 'unknown' } };
-    }
-
-    const settled = {
-      status: 200,
-      headers: {
-        'X-PAYMENT-RESPONSE': Buffer.from(JSON.stringify({ success: true, transaction: verdict.transaction ?? null, network: 'eip155:8453' })).toString('base64'),
-      },
-    };
-
+    // 1. Read the request. Nothing here costs money.
     let parsed;
     try {
       parsed = JSON.parse(body || '{}');
     } catch {
       return { status: 400, json: { error: 'body is not JSON' } };
     }
-    if (parsed.capability !== 'charter.parse') {
+
+    const capability = parsed.capability;
+    if (!capability || !CAPABILITIES[capability]) {
       return { status: 400, json: { error: 'unknown capability', known: Object.keys(CAPABILITIES) } };
     }
-    const dataHex = parsed.input?.data_hex;
-    if (typeof dataHex !== 'string' || !/^0x[0-9a-f]*$/i.test(dataHex)) {
-      return { status: 400, json: { error: 'input.data_hex must be 0x hex' } };
+
+    // 2. Validate the input before any payment is taken, so a refusal never costs the caller.
+    const input = parsed.input ?? {};
+    let dataHex = null;
+    let uid = null;
+    let network = 8453;
+    if (capability === 'charter.parse') {
+      dataHex = input.data_hex;
+      if (typeof dataHex !== 'string' || !/^0x[0-9a-f]*$/i.test(dataHex)) {
+        return { status: 400, json: { error: 'input.data_hex must be 0x hex' } };
+      }
+    } else {
+      uid = input.uid;
+      network = Number(input.network ?? 8453);
+      if (typeof uid !== 'string' || !UID_RE.test(uid)) {
+        return { status: 400, json: { error: 'input.uid must be 0x followed by 64 hex characters' } };
+      }
+      if (![8453, 84532].includes(network)) {
+        return { status: 400, json: { error: 'input.network must be 8453 or 84532' } };
+      }
     }
-    try {
-      const decoded = decodeCharterData(dataHex);
-      return { ...settled, json: { ...decoded, paid: { transaction: verdict.transaction ?? null } } };
-    } catch (error) {
-      return { status: 422, json: { error: 'payload could not be decoded', reason: String(error.message || error) } };
+
+    // 3. Ask for payment only once the call is known to be answerable.
+    const payment = headers['x-payment'] || headers['payment-signature'] || headers['X-PAYMENT'] || headers['PAYMENT-SIGNATURE'];
+    if (!payment) {
+      const body402 = terms(`${RESOURCE_URL}${path}`);
+      return { status: 402, headers: { 'PAYMENT-REQUIRED': JSON.stringify(body402) }, json: body402 };
     }
+    if (typeof verifyPayment !== 'function') {
+      return { status: 503, json: { error: 'payment verification is not configured' } };
+    }
+    const verdict = await verifyPayment(payment, { price_atomic: CAPABILITIES[capability].price_atomic });
+    if (!verdict || !verdict.ok) {
+      return { status: 402, json: { error: 'payment not accepted', reason: verdict?.reason ?? 'unknown' } };
+    }
+
+    const settled = {
+      headers: {
+        'X-PAYMENT-RESPONSE': Buffer.from(JSON.stringify({ success: true, transaction: verdict.transaction ?? null, network: 'eip155:8453' })).toString('base64'),
+      },
+    };
+    const paid = { transaction: verdict.transaction ?? null };
+
+    // 4. Do the work.
+    if (capability === 'charter.parse') {
+      try {
+        return { ...settled, status: 200, json: { ...decodeCharterData(dataHex), paid } };
+      } catch (error) {
+        return { ...settled, status: 422, json: { error: 'payload could not be decoded', reason: String(error.message || error), paid } };
+      }
+    }
+
+    const result = await verifyCharter({
+      uid,
+      network,
+      rpc: process.env.BASE_RPC || undefined,
+      ipfs: input.ipfs_gateway || undefined,
+    });
+    const status = result.attestation?.attester ? 200 : 422;
+    return { ...settled, status, json: { ...result, paid } };
   };
 }
 

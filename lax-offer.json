@@ -67,6 +67,18 @@
             "items": {
               "type": "string"
             }
+          },
+          "paid": {
+            "type": "object",
+            "properties": {
+              "transaction": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "description": "the settlement transaction on Base, null when no payment was settled"
           }
         },
         "required": [
@@ -75,6 +87,128 @@
           "names",
           "digests",
           "cids"
+        ]
+      }
+    },
+    {
+      "skill_id": "charter.verify",
+      "description": "Fetch a Base EAS attestation by uid, decode its charter payload and check every text against its sha256 digest, fetching the texts from IPFS.",
+      "pricing": {
+        "model": "per_call",
+        "amount": "0.01",
+        "currency": "USDC",
+        "rail": "x402"
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "capability": {
+            "type": "string",
+            "const": "charter.verify"
+          },
+          "input": {
+            "type": "object",
+            "properties": {
+              "uid": {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]{64}$"
+              },
+              "network": {
+                "type": "integer",
+                "enum": [
+                  8453,
+                  84532
+                ]
+              },
+              "ipfs_gateway": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "uid"
+            ]
+          }
+        },
+        "required": [
+          "capability",
+          "input"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "attestation": {
+            "type": "object",
+            "properties": {
+              "uid": {
+                "type": "string"
+              },
+              "attester": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "time": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "revoked": {
+                "type": "boolean"
+              }
+            }
+          },
+          "texts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "cid": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "string"
+                },
+                "actual": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "match": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "reason": {
+            "type": "string"
+          },
+          "paid": {
+            "type": "object",
+            "properties": {
+              "transaction": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "description": "the settlement transaction on Base, null when no payment was settled"
+          }
+        },
+        "required": [
+          "ok",
+          "attestation",
+          "texts"
         ]
       }
     }

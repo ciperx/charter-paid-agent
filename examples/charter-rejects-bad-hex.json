@@ -5,6 +5,9 @@
   },
   "response": {
     "error": "payload could not be decoded",
-    "reason": "abi: read past end of data"
+    "reason": "abi: read past end of data",
+    "paid": {
+      "transaction": "test"
+    }
   }
 }

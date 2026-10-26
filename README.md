@@ -54,8 +54,30 @@ Proven twice, on chain, not claimed:
 0x19d448a80471c9a92bdc9be91bc3eca072fbf68d303104e77b98cbda2b68696b   through the public endpoint, status 1
 ```
 
+A third settlement came through the public endpoint for `charter.verify`, answering 200 with the
+attestation fields of a real Base UID.
+
 Both are 10000 atomic USDC transfers. They are self payments between the agent's own wallet, which is
 what a test is; the code path is the same one a buyer's payment takes.
+
+## Two capabilities
+
+`charter.parse` takes `data_hex` and decodes the tuple. `charter.verify` takes `uid` and an optional
+`network` (8453 or 84532), fetches the attestation from EAS over RPC, decodes the charter payload and
+checks every text against its sha256 digest by fetching it from IPFS.
+
+```bash
+curl -sS -X POST $ENDPOINT -H 'content-type: application/json' \
+  -d '{"capability":"charter.verify","input":{"uid":"0x..."}}'
+```
+
+## A refusal never costs the caller
+
+The handler validates the capability and the input **before** it asks for payment, so a wrong uid or a
+malformed payload answers 400 with no settlement at all. This was not always true: an earlier build
+settled first and answered 400 second, and one test payment was spent on a refusal. The order was
+reversed and this is checked from the public endpoint with three malformed requests that all answer
+400 while carrying a payment header.
 
 ## What it refuses
 
