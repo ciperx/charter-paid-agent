@@ -1,0 +1,10 @@
+{
+  "capability": "charter.parse",
+  "request": {
+    "data_hex": "0x00000000000000000000000000000000000000000000000000000000000000a0..."
+  },
+  "response": {
+    "status": 402,
+    "note": "unpaid call answers with the x402 terms"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "capability": "charter.parse",
+  "request": {
+    "data_hex": "0x1234"
+  },
+  "response": {
+    "error": "payload could not be decoded",
+    "reason": "abi: read past end of data"
+  }
+}

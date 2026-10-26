@@ -1,0 +1,89 @@
+{
+  "lax_version": "1.0",
+  "name": "Charter Attestation Decoder",
+  "description": "Decodes the charter payload of a Base EAS attestation from its raw data: version, date, the text names, their sha256 digests and their IPFS CIDs. Deterministic, no network read, so a buyer can check every answer against the chain and the files themselves.",
+  "category": "data.verification",
+  "endpoint": "https://0ed1100ce8a700.lhr.life/v1/charter",
+  "capabilities": [
+    {
+      "skill_id": "charter.parse",
+      "description": "Decode an EAS charter attestation payload into its named texts and digests.",
+      "pricing": {
+        "model": "per_call",
+        "amount": "0.01",
+        "currency": "USDC",
+        "rail": "x402"
+      },
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "capability": {
+            "type": "string",
+            "const": "charter.parse"
+          },
+          "input": {
+            "type": "object",
+            "properties": {
+              "data_hex": {
+                "type": "string",
+                "pattern": "^0x[0-9a-fA-F]*$",
+                "description": "the attestation data field, hex encoded"
+              }
+            },
+            "required": [
+              "data_hex"
+            ]
+          }
+        },
+        "required": [
+          "capability",
+          "input"
+        ]
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string"
+          },
+          "names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "digests": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^0x[0-9a-f]{64}$"
+            }
+          },
+          "cids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "version",
+          "date",
+          "names",
+          "digests",
+          "cids"
+        ]
+      }
+    }
+  ],
+  "five_laws": {
+    "law_1_no_harm": "It only decodes data the caller already holds; it reads nothing on its own.",
+    "law_2_no_deception": "The answer is a pure function of the request, and a refusal says why.",
+    "law_3_no_waste": "One call, one decode, no retries and no side effects.",
+    "law_4_no_capture": "No account, no key, no lock in: the same code is public in this repository.",
+    "law_5_no_claim_beyond_evidence": "It reports what the bytes contain, never whether a charter is legitimate."
+  }
+}
