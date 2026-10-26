@@ -12,6 +12,21 @@ POST https://charter-attestation-agent.loca.lt/v1/charter
 GET  https://charter-attestation-agent.loca.lt/health
 ```
 
+## Nothing here trusts a process list
+
+A first supervisor checked whether the tunnel process existed. That was wrong: after a tunnel dropped,
+the process was still there while the public URL answered 503, so nothing restarted. It now asks the
+public URL itself, and only restarts the tunnel when that answer is not 200.
+
+Recovery was tested by breaking things, not by reading the script:
+
+- tunnel killed and its connection broken: public URL 503, supervisor restarted the tunnel, 200 again
+  within about 70 seconds
+- agent process killed while the supervisor kept running: local port refused connections, public URL
+  200 again within 65 seconds
+
+Both runs ended with the endpoint answering 402 to an unpaid call, which is the state a buyer must find.
+
 The hostname is a localtunnel subdomain, chosen to be stable rather than random: a supervisor on the
 box restarts the agent when its health check fails and restarts the tunnel when it drops, with the
 same subdomain, so the listing does not have to be paid for again.
