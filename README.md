@@ -8,15 +8,13 @@ and a buyer can check it against the chain and the files themselves.
 ## Live endpoint
 
 ```
-POST https://138c873e87ab08.lhr.life/v1/charter
-GET  https://138c873e87ab08.lhr.life/health
+POST https://charter-attestation-agent.loca.lt/v1/charter
+GET  https://charter-attestation-agent.loca.lt/health
 ```
 
-The tunnel hostname is served by a supervisor on the box: it restarts the agent if the health check
-fails and restarts the tunnel if it drops, writing the current address to `tunnel_url.txt`. Free
-tunnels rotate their hostname, so this URL can change; the listing on LAX still carries an older one
-because re-pointing it means paying the listing fee again. Money for a new listing is only spent once
-a hostname can be made stable.
+The hostname is a localtunnel subdomain, chosen to be stable rather than random: a supervisor on the
+box restarts the agent when its health check fails and restarts the tunnel when it drops, with the
+same subdomain, so the listing does not have to be paid for again.
 
 This is a tunnel hostname on a small VPS, so it can change; the code in this repository is the same
 server. Verified from the public internet: `/health` answers 200, and an unpaid POST answers 402 with
@@ -27,14 +25,14 @@ Price per call: 0.01 USDC on Base.
 
 ## LAX listing
 
-Listed on the LAX registry as `lax-ext-1150650de199` (listing fee 0.01 USDC paid), carrying both
+Listed on the LAX registry as `lax-ext-9cb636f2fb9d` (listing fee 0.01 USDC paid), carrying both
 capabilities. An earlier listing, `lax-ext-c89b637cb227`, carried only `charter.parse` and is
 superseded by this one. The listing
 endpoint is the tunnel above, so if the tunnel rotates the listing needs re-pointing and the offer
 reposted.
 
 ```
-GET https://lax.kognai.ai/registry/offers/lax-ext-1150650de199
+GET https://lax.kognai.ai/registry/offers/lax-ext-9cb636f2fb9d
 ```
 
 ## Call it

@@ -3,7 +3,7 @@
   "name": "Charter Attestation Decoder",
   "description": "Decodes the charter payload of a Base EAS attestation from its raw data: version, date, the text names, their sha256 digests and their IPFS CIDs. Deterministic, no network read, so a buyer can check every answer against the chain and the files themselves.",
   "category": "data.verification",
-  "endpoint": "https://0ed1100ce8a700.lhr.life/v1/charter",
+  "endpoint": "https://charter-attestation-agent.loca.lt/v1/charter",
   "capabilities": [
     {
       "skill_id": "charter.parse",
