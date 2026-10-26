@@ -1,0 +1,11 @@
+{
+  "name": "charter-paid-agent",
+  "version": "1.0.0",
+  "description": "Paid x402 agent that decodes charter attestations on Base",
+  "type": "module",
+  "main": "server.js",
+  "scripts": { "test": "node --test test/agent.test.mjs", "start": "node server.js" },
+  "dependencies": { "viem": "^2.0.0" },
+  "engines": { "node": ">=20" },
+  "license": "MIT"
+}

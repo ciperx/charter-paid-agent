@@ -10,6 +10,7 @@
  */
 import { createServer } from 'node:http';
 import { decodeCharterData } from './lib/charter.js';
+import { createPaywall } from './lib/pay.js';
 
 export const PRICE_ATOMIC = '10000'; // 0.01 USDC, six decimals
 export const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
@@ -62,7 +63,7 @@ export function createAgent({ verifyPayment } = {}) {
     }
     if (path !== '/v1/charter') return { status: 404, json: { error: 'not found' } };
 
-    const payment = headers['x-payment'] || headers['X-PAYMENT'];
+    const payment = headers['x-payment'] || headers['payment-signature'] || headers['X-PAYMENT'] || headers['PAYMENT-SIGNATURE'];
     if (!payment) {
       return { status: 402, headers: { 'PAYMENT-REQUIRED': JSON.stringify(terms(`${RESOURCE_URL}${path}`)) }, json: terms(`${RESOURCE_URL}${path}`) };
     }
@@ -73,6 +74,13 @@ export function createAgent({ verifyPayment } = {}) {
     if (!verdict || !verdict.ok) {
       return { status: 402, json: { error: 'payment not accepted', reason: verdict?.reason ?? 'unknown' } };
     }
+
+    const settled = {
+      status: 200,
+      headers: {
+        'X-PAYMENT-RESPONSE': Buffer.from(JSON.stringify({ success: true, transaction: verdict.transaction ?? null, network: 'eip155:8453' })).toString('base64'),
+      },
+    };
 
     let parsed;
     try {
@@ -89,14 +97,27 @@ export function createAgent({ verifyPayment } = {}) {
     }
     try {
       const decoded = decodeCharterData(dataHex);
-      return { status: 200, json: decoded };
+      return { ...settled, json: { ...decoded, paid: { transaction: verdict.transaction ?? null } } };
     } catch (error) {
       return { status: 422, json: { error: 'payload could not be decoded', reason: String(error.message || error) } };
     }
   };
 }
 
-export function listen({ port = Number(process.env.PORT) || 8095, verifyPayment } = {}) {
+export function settleFromEnv() {
+  const key = process.env.RELAYER_KEY;
+  if (!key) return undefined;
+  const { verifyPayment } = createPaywall({
+    relayerKey: key,
+    rpcUrl: process.env.BASE_RPC || 'https://base.gateway.tenderly.co',
+    asset: USDC_BASE,
+    payTo: PAY_TO,
+    priceAtomic: PRICE_ATOMIC,
+  });
+  return verifyPayment;
+}
+
+export function listen({ port = Number(process.env.PORT) || 8095, verifyPayment = settleFromEnv() } = {}) {
   const handler = createAgent({ verifyPayment });
   const server = createServer(async (req, res) => {
     const body = req.method === 'POST' ? await readBody(req) : '';

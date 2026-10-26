@@ -38,8 +38,24 @@ curl -sS -X POST https://0ed1100ce8a700.lhr.life/v1/charter \
 ```
 
 Unpaid, the answer is 402 with `PAYMENT-REQUIRED` and the terms in the body. Paid, the answer is the
-decoded payload. The payment is checked by an injected `verifyPayment`, so the server never claims to
-have settled something it did not check.
+decoded payload.
+
+## How a payment is actually taken
+
+The public x402 facilitator only settles testnets, so this agent settles on its own with a relayer
+key: it recovers the payer from the EIP-712 signature, refuses a nonce that is already used on chain,
+submits `transferWithAuthorization` itself, and only answers after the receipt is successful. The
+settlement transaction comes back in the answer and in the `X-PAYMENT-RESPONSE` header.
+
+Proven twice, on chain, not claimed:
+
+```
+0x216f958d2625010d934e5783ecd69a041da15950c5249de2e4019a8b9d52d609   local run, block 53131145, status 1
+0x19d448a80471c9a92bdc9be91bc3eca072fbf68d303104e77b98cbda2b68696b   through the public endpoint, status 1
+```
+
+Both are 10000 atomic USDC transfers. They are self payments between the agent's own wallet, which is
+what a test is; the code path is the same one a buyer's payment takes.
 
 ## What it refuses
 
